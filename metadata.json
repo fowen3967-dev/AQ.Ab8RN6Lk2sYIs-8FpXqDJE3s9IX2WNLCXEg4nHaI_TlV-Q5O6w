@@ -1,0 +1,6 @@
+{
+  "name": "Pawa Market PNG",
+  "description": "Papua New Guinea's trusted buying and selling online marketplace platform with verified local sellers, province search, and direct WhatsApp contact.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

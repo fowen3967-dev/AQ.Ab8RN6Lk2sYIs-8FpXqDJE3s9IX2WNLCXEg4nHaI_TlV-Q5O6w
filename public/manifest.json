@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "Pawa Market — Papua New Guinea Marketplace",
+  "short_name": "Pawa Market",
+  "description": "Papua New Guinea's trusted online buying and selling marketplace with verified local sellers and province search.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#1c1917",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
