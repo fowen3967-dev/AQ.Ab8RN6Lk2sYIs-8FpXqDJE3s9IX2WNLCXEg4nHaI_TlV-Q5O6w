@@ -1,4 +1,4 @@
-import { Listing, RevenueProjection, Seller } from '../types/marketplace';
+import { Listing, RevenueProjection, Seller, SellerReview } from '../types/marketplace';
 
 /**
  * Format PNG Kina currency with standard thousands separators and symbol K
@@ -124,3 +124,56 @@ export function filterListings(
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 }
+
+/**
+ * Calculate potential savings for a target price alert
+ */
+export function calculatePriceAlertSavings(
+  currentPrice: number,
+  targetPrice: number
+): { savingsAmount: number; savingsPercent: number } {
+  if (targetPrice >= currentPrice || currentPrice <= 0) {
+    return { savingsAmount: 0, savingsPercent: 0 };
+  }
+  const savingsAmount = currentPrice - targetPrice;
+  const savingsPercent = Math.round((savingsAmount / currentPrice) * 100);
+  return { savingsAmount, savingsPercent };
+}
+
+/**
+ * Check if a price alert condition is satisfied
+ */
+export function checkPriceAlertTrigger(targetPrice: number, newPrice: number): boolean {
+  return newPrice > 0 && newPrice <= targetPrice;
+}
+
+/**
+ * Calculate the average rating and count from a list of seller reviews
+ */
+export function calculateSellerAverageRating(
+  reviews: SellerReview[],
+  fallbackRating = 5.0
+): { average: number; count: number } {
+  if (!reviews || reviews.length === 0) {
+    return { average: fallbackRating, count: 0 };
+  }
+  const total = reviews.reduce((acc, r) => {
+    const clamped = Math.min(5, Math.max(1, r.rating || 5));
+    return acc + clamped;
+  }, 0);
+  const average = Math.round((total / reviews.length) * 10) / 10;
+  return { average, count: reviews.length };
+}
+
+/**
+ * Calculate the frequency distribution of stars (1 to 5)
+ */
+export function getRatingStarsBreakdown(reviews: SellerReview[]): Record<1 | 2 | 3 | 4 | 5, number> {
+  const counts: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  for (const rev of reviews) {
+    const star = Math.min(5, Math.max(1, Math.round(rev.rating))) as 1 | 2 | 3 | 4 | 5;
+    counts[star] = (counts[star] || 0) + 1;
+  }
+  return counts;
+}
+

@@ -14,8 +14,8 @@ import { TrustSafetySection } from './components/TrustSafetySection';
 import { Footer } from './components/Footer';
 import { DownloadAppModal } from './components/DownloadAppModal';
 
-import { INITIAL_LISTINGS, PNG_PROVINCES, CATEGORIES } from './data/mockData';
-import { Listing, FounderSettings } from './types/marketplace';
+import { INITIAL_LISTINGS, PNG_PROVINCES, CATEGORIES, INITIAL_SELLER_REVIEWS } from './data/mockData';
+import { Listing, FounderSettings, PriceAlert, SellerReview } from './types/marketplace';
 import { filterListings, formatKina } from './utils/marketplace';
 import { SlidersHorizontal, ArrowUpDown, Sparkles, AlertCircle, CheckCircle, Plus } from 'lucide-react';
 
@@ -23,6 +23,10 @@ export default function App() {
   // Marketplace Listings State
   const [listings, setListings] = useState<Listing[]>(INITIAL_LISTINGS);
   const [savedIds, setSavedIds] = useState<string[]>(['pawa-101', 'pawa-103']);
+  // Temporary Price Alerts state
+  const [priceAlerts, setPriceAlerts] = useState<PriceAlert[]>([]);
+  // Seller Reviews & Ratings state
+  const [sellerReviews, setSellerReviews] = useState<SellerReview[]>(INITIAL_SELLER_REVIEWS);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -160,6 +164,77 @@ export default function App() {
     setRegisterInitialPackage(pkgId);
     setIsRegisterOpen(true);
   };
+
+  const handleSavePriceAlert = (alertData: Omit<PriceAlert, 'id' | 'createdAt' | 'isActive'>) => {
+    const existingIndex = priceAlerts.findIndex((a) => a.listingId === alertData.listingId);
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    if (existingIndex >= 0) {
+      setPriceAlerts((prev) =>
+        prev.map((a, idx) =>
+          idx === existingIndex
+            ? {
+                ...a,
+                ...alertData,
+                createdAt: dateStr,
+                isActive: true,
+              }
+            : a
+        )
+      );
+      showToast(`Price alert updated to ${formatKina(alertData.targetPrice)} for ${alertData.listingTitle}`);
+    } else {
+      const newAlert: PriceAlert = {
+        id: `alert-${Date.now()}`,
+        ...alertData,
+        createdAt: dateStr,
+        isActive: true,
+      };
+      setPriceAlerts((prev) => [newAlert, ...prev]);
+      showToast(`Price alert set at ${formatKina(alertData.targetPrice)}! You will be notified on price drop.`);
+    }
+  };
+
+  const handleRemovePriceAlert = (alertId: string) => {
+    setPriceAlerts((prev) => prev.filter((a) => a.id !== alertId));
+    showToast('Price alert removed');
+  };
+
+  const handleAddSellerReview = (newReviewData: Omit<SellerReview, 'id' | 'createdAt'>) => {
+    const newRev: SellerReview = {
+      id: `rev-${Date.now()}`,
+      ...newReviewData,
+      createdAt: new Date().toISOString(),
+    };
+    setSellerReviews((prev) => [newRev, ...prev]);
+
+    // Update seller rating across listings in state
+    setListings((prev) =>
+      prev.map((item) => {
+        if (item.seller.id === newReviewData.sellerId) {
+          const sellerMatchingRevs = [newRev, ...sellerReviews.filter((r) => r.sellerId === newReviewData.sellerId)];
+          const newAvg =
+            Math.round(
+              (sellerMatchingRevs.reduce((acc, r) => acc + r.rating, 0) / sellerMatchingRevs.length) * 10
+            ) / 10;
+          return {
+            ...item,
+            seller: {
+              ...item.seller,
+              rating: newAvg,
+              reviewCount: sellerMatchingRevs.length,
+            },
+          };
+        }
+        return item;
+      })
+    );
+
+    showToast(`Thank you ${newReviewData.authorName}! Your feedback has been published.`);
+  };
+
+  const activeAlertForSelected = selectedListing
+    ? priceAlerts.find((a) => a.listingId === selectedListing.id && a.isActive)
+    : undefined;
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col font-sans text-stone-900 selection:bg-amber-300 selection:text-stone-950">
@@ -385,6 +460,11 @@ export default function App() {
         isSaved={selectedListing ? savedIds.includes(selectedListing.id) : false}
         onToggleSave={(id) => handleToggleSave(id)}
         onReportListing={handleReportListing}
+        activeAlert={activeAlertForSelected}
+        onSavePriceAlert={handleSavePriceAlert}
+        onRemovePriceAlert={handleRemovePriceAlert}
+        sellerReviews={selectedListing ? sellerReviews.filter((r) => r.sellerId === selectedListing.seller.id) : []}
+        onAddReview={handleAddSellerReview}
       />
 
       {/* Post an Ad Modal */}

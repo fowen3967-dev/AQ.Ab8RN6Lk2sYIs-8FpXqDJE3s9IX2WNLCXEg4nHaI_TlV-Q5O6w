@@ -32,6 +32,19 @@ export interface Seller {
   joinedDate: string;
   activeAdsCount: number;
   rating: number;
+  reviewCount?: number;
+}
+
+export interface SellerReview {
+  id: string;
+  sellerId: string;
+  listingId?: string;
+  authorName: string;
+  province?: string;
+  rating: number; // 1 to 5
+  comment: string;
+  createdAt: string;
+  isVerifiedBuyer?: boolean;
 }
 
 export interface Listing {
@@ -68,4 +81,15 @@ export interface RevenueProjection {
   businessRate: number; // K50
   premiumCount: number;
   premiumRate: number; // K100
+}
+
+export interface PriceAlert {
+  id: string;
+  listingId: string;
+  listingTitle: string;
+  currentPrice: number;
+  targetPrice: number;
+  notifyContact: string; // phone/WhatsApp or email
+  createdAt: string;
+  isActive: boolean;
 }

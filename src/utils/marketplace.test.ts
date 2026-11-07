@@ -1,7 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatKina, calculateMonthlyRevenue, calculateSellerTrustScore, filterListings } from './marketplace';
-import { Listing } from '../types/marketplace';
+import {
+  formatKina,
+  calculateMonthlyRevenue,
+  calculateSellerTrustScore,
+  filterListings,
+  calculatePriceAlertSavings,
+  checkPriceAlertTrigger,
+  calculateSellerAverageRating,
+  getRatingStarsBreakdown,
+} from './marketplace';
+import { Listing, SellerReview } from '../types/marketplace';
 
 test('formatKina formats numbers with K prefix and commas', () => {
   assert.equal(formatKina(0), 'K0');
@@ -134,3 +143,81 @@ test('filterListings respects province and category filters', () => {
   assert.equal(textSearch.length, 1);
   assert.equal(textSearch[0].id, '1');
 });
+
+test('calculatePriceAlertSavings calculates absolute and percentage discounts', () => {
+  // Current K100,000, target K80,000 -> K20,000 savings (20%)
+  const savings = calculatePriceAlertSavings(100000, 80000);
+  assert.equal(savings.savingsAmount, 20000);
+  assert.equal(savings.savingsPercent, 20);
+
+  // If target >= current, savings should be 0
+  const noSavings = calculatePriceAlertSavings(18000, 18000);
+  assert.equal(noSavings.savingsAmount, 0);
+  assert.equal(noSavings.savingsPercent, 0);
+});
+
+test('checkPriceAlertTrigger triggers only when new price is at or below target', () => {
+  assert.equal(checkPriceAlertTrigger(15000, 14000), true);
+  assert.equal(checkPriceAlertTrigger(15000, 15000), true);
+  assert.equal(checkPriceAlertTrigger(15000, 16000), false);
+  assert.equal(checkPriceAlertTrigger(15000, 0), false);
+});
+
+test('calculateSellerAverageRating returns fallback when no reviews exist', () => {
+  const result = calculateSellerAverageRating([], 4.8);
+  assert.equal(result.average, 4.8);
+  assert.equal(result.count, 0);
+});
+
+test('calculateSellerAverageRating calculates correct average and count', () => {
+  const sampleReviews: SellerReview[] = [
+    {
+      id: 'rev-1',
+      sellerId: 'sel-01',
+      authorName: 'Gabriel B.',
+      rating: 5,
+      comment: 'Excellent seller, inspected car at Waigani.',
+      createdAt: '2026-03-01',
+      isVerifiedBuyer: true,
+    },
+    {
+      id: 'rev-2',
+      sellerId: 'sel-01',
+      authorName: 'Mary R.',
+      rating: 4,
+      comment: 'Very responsive on WhatsApp, fair negotiation.',
+      createdAt: '2026-03-02',
+      isVerifiedBuyer: true,
+    },
+    {
+      id: 'rev-3',
+      sellerId: 'sel-01',
+      authorName: 'Alois P.',
+      rating: 5,
+      comment: 'Honest seller with genuine ownership documents.',
+      createdAt: '2026-03-03',
+      isVerifiedBuyer: true,
+    },
+  ];
+
+  // (5 + 4 + 5) / 3 = 14 / 3 = 4.6666... -> 4.7
+  const result = calculateSellerAverageRating(sampleReviews);
+  assert.equal(result.average, 4.7);
+  assert.equal(result.count, 3);
+});
+
+test('getRatingStarsBreakdown tallies individual stars accurately', () => {
+  const sampleReviews: SellerReview[] = [
+    { id: '1', sellerId: 's', authorName: 'A', rating: 5, comment: '', createdAt: '' },
+    { id: '2', sellerId: 's', authorName: 'B', rating: 5, comment: '', createdAt: '' },
+    { id: '3', sellerId: 's', authorName: 'C', rating: 4, comment: '', createdAt: '' },
+    { id: '4', sellerId: 's', authorName: 'D', rating: 1, comment: '', createdAt: '' },
+  ];
+  const breakdown = getRatingStarsBreakdown(sampleReviews);
+  assert.equal(breakdown[5], 2);
+  assert.equal(breakdown[4], 1);
+  assert.equal(breakdown[3], 0);
+  assert.equal(breakdown[2], 0);
+  assert.equal(breakdown[1], 1);
+});
+
